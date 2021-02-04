@@ -10,20 +10,11 @@ tested on harmonic oscillator, morse potential and square well potential.
 'some standard imports for plotting, fitting etc.'
 import numpy as np
 import pickle
-from matplotlib import rc
-from scipy import constants as cst
-import scipy.integrate as spi
-from scipy import special
 import matplotlib.pyplot as plt
-import matplotlib.colors as colors
-import matplotlib.patches as patch
 import scipy.optimize as optimization
 from scipy.optimize import curve_fit, root_scalar, fmin, least_squares
-from scipy.special import erf
-import matplotlib.transforms as mtransforms
 from scipy.interpolate import interp1d, splev, splrep
-from math import ceil
-import timeit
+
 
 
 def get_delta(E, meff, func, N, pos_array, psi, matching_index):
