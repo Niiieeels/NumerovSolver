@@ -210,7 +210,7 @@ pot6, pot7, pot8, pot9, pot10 = np.loadtxt("triplett_li2_dipole_allowed_pecs2", 
 # lowest energetical li2+ potential
 pot11 = np.loadtxt("li2plus_pecs", unpack=True, usecols=(1,))
 
-dissE = 0.03856 # dissociation energy of X^1S_g^+ in Hartrees, pot1 is X^1S_g+
+dissE = 0.038573934 # dissociation energy of X^1S_g^+ in Hartrees, pot1 is X^1S_g+
 dissE2 = 0.0014163 # dissociation energy of A^3S_u^+ in Hartrees, pot6
 dissE3 = 0.0474801 # dissociation energy of 1^2S_g^+ in Hartrees, pot11
 # effective mass in of two 6li nuclei in atomic units (i.e. in electron masses)
@@ -224,28 +224,32 @@ pot11 *= 10**(-6)
 selected_pot = pot6
 N = 1000
 psi_val = np.zeros(N, dtype='f8')
-xlim_left, xlim_right = 3,40
+xlim_left, xlim_right = 1,40
 pos_array = np.linspace(xlim_left, xlim_right, N, dtype='f8')
 dx = pos_array[1]-pos_array[0]
 
 ########### first naive fits with cubic splines ##################
 #singlet potential
-tck = splrep(r0, pot1, s=0)
+tck = splrep(r0, pot1, k=3, s=0)
 x1sgplus_pot = lambda x: splev(x, tck, der=0)
-#li2+ potential
-tck = splrep(r0, pot11, s=0)
-one2sgplus_pot = lambda x: splev(x, tck, der=0)
+potmin = np.min(x1sgplus_pot(pos_array))
+#dissE1 = -potmin
+pot1 += dissE
+tck = splrep(r0, pot1, k=3, s=0)
+x1sgplus_pot = lambda x: splev(x, tck, der=0)
+# #li2+ potential
+# tck = splrep(r0, pot11, s=0)
+# one2sgplus_pot = lambda x: splev(x, tck, der=0)
 
-#triplet potential, shifted in y- direction
-plot_range = np.linspace(0,30, N, dtype='f8')
-tck = splrep(r0, pot6, k=3,s=0.0)
-a3suplus_pot = lambda x: splev(x, tck, der=0)
-potmin = np.min(a3suplus_pot(plot_range))
-dissE2 = -potmin
-pot6 -= potmin
-#pos_shift = plot_range[minarg]
-tck = splrep(r0, pot6, k=3,s=0)
-a3suplus_pot = lambda x: splev(x, tck, der=0)
+# #triplet potential, shifted in y- direction
+# tck = splrep(r0, pot6, k=3,s=0.0)
+# a3suplus_pot = lambda x: splev(x, tck, der=0)
+# potmin = np.min(a3suplus_pot(pos_array))
+# dissE2 = -potmin
+# pot6 -= potmin
+# #pos_shift = plot_range[minarg]
+# tck = splrep(r0, pot6, k=3,s=0)
+# a3suplus_pot = lambda x: splev(x, tck, der=0)
 ##################################################################
 
 # long-range dispersion coefficients for Li-Li for two ground state atoms
@@ -273,7 +277,8 @@ def u(r):
     global coeffs
     return funcPoly(r, lambda x: 1/x, *coeffs)
 # equilibrium bond length
-r_eq = pos_array[np.argmin(a3suplus_pot(pos_array))]
+#r_eq = pos_array[np.argmin(a3suplus_pot(pos_array))]
+r_eq = pos_array[np.argmin(x1sgplus_pot(pos_array))]
 
 # returns function used in definition of MLR model
 def y(pos, p, r_ref):
@@ -291,22 +296,22 @@ def beta(pos, De, r_ref, p, q, *coeffs):
 # inverse power in the long range potential u(r)
 # q < p is a small value
 # r_ref = can roughly be chosen between 1.1r_eq and 1.5r_eq
-def MLR_pot(pos, De, r_ref, *coeff_list,p=4, q=2):
+def MLR_pot(pos, De, r_ref, *coeff_list,p=3, q=2):
     global r_eq
     return De*(1- u(pos)/u(r_eq)*np.exp(-beta(pos, De, r_ref, p, q, *coeff_list)*y(pos, p, r_eq)))**2
 
-# #fit long range morse potential to e.g. A^3S_u^+
+# #fit long range morse potential to e.g. A^3S_u^+, X1sg^+
 rref = 1.3*r_eq
-# # use of least_squares
-# # function to be minimized
-# # x0 is a numpy array with parameters
+# use of least_squares
+# function to be minimized
+# x0 is a numpy array with parameters
 # def F(x0):
-#     global r0, dissE2, rref
-#     return (MLR_pot(r0, dissE2, rref, *tuple(x0))-pot6)
+#     global r0, dissE, rref
+#     return (MLR_pot(r0, dissE, rref, *tuple(x0))-pot1)
 # x0_init = np.array([0])
 # #res = least_squares(F, x0_init, method='trf', loss='soft_l1')
 # res = least_squares(F, x0_init, method='lm')
-# for i in np.arange(13):
+# for i in np.arange(14):
 #     x0_init = np.array(tuple(res.x)+(0,))
 #     try:
 #         res = least_squares(F, x0_init, method='lm')
@@ -315,13 +320,13 @@ rref = 1.3*r_eq
 #         break
 #     except RuntimeError:
 #         break
-#print(res.x)
-#print(res.cost)
-#ax.plot(pos_array, MLR_pot(pos_array, dissE2, rref, *tuple(res.x)), 'g-')
-#pickle.dump(res.x, open("a3suplus.pot","wb"))
+# print(res.x)
+# print(res.cost)
+# #ax.plot(pos_array, MLR_pot(pos_array, dissE, rref, *tuple(res.x)), 'g-')
+# pickle.dump(res.x, open("x1sgplus.pot","wb"))
 
-a3suplus_pot = lambda pos: MLR_pot(pos, dissE2, rref, *tuple(pickle.load(open("a3suplus.pot", "rb"))))
-
+#a3suplus_pot = lambda pos: MLR_pot(pos, dissE2, rref, *tuple(pickle.load(open("a3suplus.pot", "rb"))))
+x1sgplus_pot = lambda pos: MLR_pot(pos, dissE, rref, *tuple(pickle.load(open("x1sgplus.pot", "rb"))))
 
 #this function returns the finite well potential
 #depending on its total energy E in finite square well potential
@@ -360,17 +365,17 @@ def get_En_morsePot(n,De,a):
 #chosen_potential = lambda x: square_well(x, De, a, x0)
 # Optimal parameters fit of MLR model to A3S_^+-potential:
 # r_ref = 1.3 r_eq, N=13, p=4, q=2 @ cost = 1.70129E-9
-chosen_potential, meff = a3suplus_pot, 5468.67
-#chosen_potential, meff = x1sgplus_pot, 5468.67
+#chosen_potential, meff = a3suplus_pot, 5468.67
+chosen_potential, meff = x1sgplus_pot, 5468.67
 #chosen_potential, meff = one2sgplus_pot, 5468.67
 #chosen_potential, meff = lambda x: piecewise_pot(x, a3suplus_pot,20, c6, pos_array[minarg], potmin), 5468.67
 
-plot_factor = 0.0001
+plot_factor = 0.0002
 pot_along_array = chosen_potential(pos_array)
 ax.set_xlim(xlim_left,xlim_right)
 ax.set_ylim(0, 1.5*(pot_along_array[-1]-pot_along_array[np.argmin(pot_along_array)]))
 ax.plot(pos_array, pot_along_array)
-ax.plot(r0, pot6, 'ro')
+ax.plot(r0, pot1, 'ro')
 
 
 
@@ -380,10 +385,10 @@ def kin_energy(r,meff,E):
 
 
 #negative logarithms of relative decays (determines integration range)
-eps_left, eps_right = 150, 30
+eps_left, eps_right = 150, 150
 
-E,EigenE, n,Emax = 0,0,0,dissE2
-dE = dissE2/100
+E,EigenE, n,Emax = 0,0,0,dissE
+dE = dissE/100
 psi_val[0], psi_val[1], psi_val[-1], psi_val[-2] = 0.0, (-1.0)**n, 0.0, 1.0
 
 
@@ -427,5 +432,5 @@ while E < Emax:
           if (n>=1):
               dE = (energies[-1]-energies[-2])/5.0
           n+=1
-# save energies and wavefunctions in picklet object          
-pickle.dump(zip(energies,wavefunctions), open("a3suplus_solutions.dat", "wb"))
+# # save energies and wavefunctions in picklet object          
+pickle.dump(zip(energies,wavefunctions), open("x1sgplus_solutions.dat", "wb"))
