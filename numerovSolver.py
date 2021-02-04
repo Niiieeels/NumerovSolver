@@ -224,7 +224,7 @@ pot11 *= 10**(-6)
 selected_pot = pot6
 N = 1000
 psi_val = np.zeros(N, dtype='f8')
-xlim_left, xlim_right = 3,30
+xlim_left, xlim_right = 3,40
 pos_array = np.linspace(xlim_left, xlim_right, N, dtype='f8')
 dx = pos_array[1]-pos_array[0]
 
@@ -427,9 +427,5 @@ while E < Emax:
           if (n>=1):
               dE = (energies[-1]-energies[-2])/5.0
           n+=1
-          
-          
-
-#level_numbers = np.arange(n)
-#np.savetxt("energy_levels.csv", np.c_[level_numbers, energies, (energies/(10.937*1E3)+dissE3)*219474.631363], fmt=('%i',' %.2f', '%.2f'), header='level number\t energy [a.u.]\t energy [cm-^1]')
-#np.savetxt("wave_functions.csv", np.c_[pos_array, wave_functions])
+# save energies and wavefunctions in picklet object          
+pickle.dump(zip(energies,wavefunctions), open("a3suplus_solutions.dat", "wb"))
