@@ -204,52 +204,50 @@ def returnEigenWaveFunction(meff, E, func, N, pos_array, psi, matching_index):
 fig = plt.figure(figsize=(10,10))
 ax = fig.add_subplot(111)
 
+
+##### all information about potential energy curve that you
+#### want to calculate vibrational wave functions for #########
+# from I. Schmidt-Mink et. al. / Ground- and excited state properties of
+# Li_2 and Li_2^+
 #triplett potentials of li_2 aconnected by selection rules, given in 10^(-6)*Hartree
 r0, pot1, pot2, pot3, pot4, pot5= np.loadtxt("singlett_li2_dipole_allowed_pecs.csv", unpack=True)
 pot6, pot7, pot8, pot9, pot10 = np.loadtxt("triplett_li2_dipole_allowed_pecs2", unpack=True, usecols=(1,2,3,4,5))
 # lowest energetical li2+ potential
 pot11 = np.loadtxt("li2plus_pecs", unpack=True, usecols=(1,))
 
-dissE = 0.038573934 # dissociation energy of X^1S_g^+ in Hartrees, pot1 is X^1S_g+
-dissE2 = 0.0014163 # dissociation energy of A^3S_u^+ in Hartrees, pot6
-dissE3 = 0.0474801 # dissociation energy of 1^2S_g^+ in Hartrees, pot11
-# effective mass in of two 6li nuclei in atomic units (i.e. in electron masses)
 
 # convert into Hartrees
 pot1 *= 10**(-6)
 pot6 *= 10**(-6)
 pot11 *= 10**(-6)
 
+# dissociation energies of in hartrees
 
-selected_pot = pot6
+# X^1S_g^+  according to J. Chem. Phys. 131, 204309 200
+dissE = 8516.774/219474.631363 # dissociation energy of X^1S_g^+ in Hartrees, pot1 is X^1S_g+
+
+dissE2 = 322/219474.631363 # dissociation energy of A^3S_u^+ in Hartrees, pot6
+dissE3 = 10441/219474.631363 # dissociation energy of 1^2S_g^+ in Hartrees, pot11
+
+#shift potentials by dissociation energies given above
+pot1 += dissE
+pot6 += dissE2
+pot11 += dissE3
+
+# equilibrium bond length in Bohr radii
+# from I. Schmidt-Mink et. al. / Ground- and excited state properties of
+# Li_2 and Li_2^+
+bond_length1 = 5.0550174  # X^1S_g^+
+bond_length2 = 7.9028347 # A^3S_u^+
+bond_length3 = 5.8562613 #12S_g^+
+
 N = 1000
 psi_val = np.zeros(N, dtype='f8')
 xlim_left, xlim_right = 1,40
 pos_array = np.linspace(xlim_left, xlim_right, N, dtype='f8')
 dx = pos_array[1]-pos_array[0]
+#ax.plot(r0, pot11, 'ro')
 
-########### first naive fits with cubic splines ##################
-#singlet potential
-tck = splrep(r0, pot1, k=3, s=0)
-x1sgplus_pot = lambda x: splev(x, tck, der=0)
-potmin = np.min(x1sgplus_pot(pos_array))
-#dissE1 = -potmin
-pot1 += dissE
-tck = splrep(r0, pot1, k=3, s=0)
-x1sgplus_pot = lambda x: splev(x, tck, der=0)
-# #li2+ potential
-# tck = splrep(r0, pot11, s=0)
-# one2sgplus_pot = lambda x: splev(x, tck, der=0)
-
-# #triplet potential, shifted in y- direction
-# tck = splrep(r0, pot6, k=3,s=0.0)
-# a3suplus_pot = lambda x: splev(x, tck, der=0)
-# potmin = np.min(a3suplus_pot(pos_array))
-# dissE2 = -potmin
-# pot6 -= potmin
-# #pos_shift = plot_range[minarg]
-# tck = splrep(r0, pot6, k=3,s=0)
-# a3suplus_pot = lambda x: splev(x, tck, der=0)
 ##################################################################
 
 # long-range dispersion coefficients for Li-Li for two ground state atoms
@@ -261,7 +259,7 @@ c10 = 7372100
 coeffs = np.zeros(11)
 coeffs[6] = c6
 coeffs[8] = c8
-#coeffs[10] = c10
+coeffs[10] = c10
 coeffs = tuple(coeffs)
 
 # returns value of a polynomial of the form
@@ -276,9 +274,7 @@ def funcPoly(pos, func, *coeffs):
 def u(r):
     global coeffs
     return funcPoly(r, lambda x: 1/x, *coeffs)
-# equilibrium bond length
-#r_eq = pos_array[np.argmin(a3suplus_pot(pos_array))]
-r_eq = pos_array[np.argmin(x1sgplus_pot(pos_array))]
+
 
 # returns function used in definition of MLR model
 def y(pos, p, r_ref):
@@ -296,22 +292,24 @@ def beta(pos, De, r_ref, p, q, *coeffs):
 # inverse power in the long range potential u(r)
 # q < p is a small value
 # r_ref = can roughly be chosen between 1.1r_eq and 1.5r_eq
-def MLR_pot(pos, De, r_ref, *coeff_list,p=3, q=2):
+def MLR_pot(pos, De, r_ref, *coeff_list,p=4, q=3):
     global r_eq
     return De*(1- u(pos)/u(r_eq)*np.exp(-beta(pos, De, r_ref, p, q, *coeff_list)*y(pos, p, r_eq)))**2
 
 # #fit long range morse potential to e.g. A^3S_u^+, X1sg^+
+r_eq = bond_length3
 rref = 1.3*r_eq
-# use of least_squares
-# function to be minimized
-# x0 is a numpy array with parameters
+
+# # use of least_squares
+# # function to be minimized
+# # x0 is a numpy array with parameters
 # def F(x0):
-#     global r0, dissE, rref
-#     return (MLR_pot(r0, dissE, rref, *tuple(x0))-pot1)
+#     global r0, dissE, dissE2, dissE3, rref
+#     return (MLR_pot(r0, dissE3, rref, *tuple(x0))-pot11)
 # x0_init = np.array([0])
 # #res = least_squares(F, x0_init, method='trf', loss='soft_l1')
 # res = least_squares(F, x0_init, method='lm')
-# for i in np.arange(14):
+# for i in np.arange(13):
 #     x0_init = np.array(tuple(res.x)+(0,))
 #     try:
 #         res = least_squares(F, x0_init, method='lm')
@@ -322,11 +320,14 @@ rref = 1.3*r_eq
 #         break
 # print(res.x)
 # print(res.cost)
-# #ax.plot(pos_array, MLR_pot(pos_array, dissE, rref, *tuple(res.x)), 'g-')
-# pickle.dump(res.x, open("x1sgplus.pot","wb"))
 
-#a3suplus_pot = lambda pos: MLR_pot(pos, dissE2, rref, *tuple(pickle.load(open("a3suplus.pot", "rb"))))
-x1sgplus_pot = lambda pos: MLR_pot(pos, dissE, rref, *tuple(pickle.load(open("x1sgplus.pot", "rb"))))
+# pickle.dump(res.x, open("x1sgplus.pot","wb"))
+# pickle.dump(res.x, open("a3suplus.pot", "wb"))
+# pickle.dump(res.x, open("one2sgplus.pot", "wb"))
+
+a3suplus_pot = lambda pos: MLR_pot(pos, dissE2, 1.3*bond_length2, *tuple(pickle.load(open("a3suplus.pot", "rb"))))
+x1sgplus_pot = lambda pos: MLR_pot(pos, dissE, 1.6*bond_length1, *tuple(pickle.load(open("x1sgplus.pot", "rb"))))
+one2sgplus_pot = lambda pos: MLR_pot(pos, dissE3, 1.3*bond_length3, *tuple(pickle.load(open("one2sgplus.pot", "rb"))))
 
 #this function returns the finite well potential
 #depending on its total energy E in finite square well potential
@@ -366,16 +367,15 @@ def get_En_morsePot(n,De,a):
 # Optimal parameters fit of MLR model to A3S_^+-potential:
 # r_ref = 1.3 r_eq, N=13, p=4, q=2 @ cost = 1.70129E-9
 #chosen_potential, meff = a3suplus_pot, 5468.67
-chosen_potential, meff = x1sgplus_pot, 5468.67
-#chosen_potential, meff = one2sgplus_pot, 5468.67
-#chosen_potential, meff = lambda x: piecewise_pot(x, a3suplus_pot,20, c6, pos_array[minarg], potmin), 5468.67
+#chosen_potential, meff = x1sgplus_pot, 5468.67
+chosen_potential, meff = one2sgplus_pot, 5468.67
 
-plot_factor = 0.0002
-pot_along_array = chosen_potential(pos_array)
-ax.set_xlim(xlim_left,xlim_right)
-ax.set_ylim(0, 1.5*(pot_along_array[-1]-pot_along_array[np.argmin(pot_along_array)]))
-ax.plot(pos_array, pot_along_array)
-ax.plot(r0, pot1, 'ro')
+# plot_factor = 0.0002
+# pot_along_array = chosen_potential(pos_array)
+# ax.set_xlim(xlim_left,xlim_right)
+# ax.set_ylim(0, 2*1.5*(pot_along_array[-1]-pot_along_array[np.argmin(pot_along_array)]))
+# #ax.plot(pos_array, pot_along_array)
+
 
 
 
@@ -385,10 +385,10 @@ def kin_energy(r,meff,E):
 
 
 #negative logarithms of relative decays (determines integration range)
-eps_left, eps_right = 150, 150
+eps_left, eps_right = 150, 100
 
-E,EigenE, n,Emax = 0,0,0,dissE
-dE = dissE/100
+E,EigenE, n,Emax = 0,0,0,dissE3
+dE = Emax/100
 psi_val[0], psi_val[1], psi_val[-1], psi_val[-2] = 0.0, (-1.0)**n, 0.0, 1.0
 
 
@@ -405,32 +405,80 @@ energies = []
 # therefore it's best to choose the matching point somewhere near or at the
 # beginning of the integration range to obtain the highest precision
 # on the determined energy eigenvalues
-while E < Emax:
-    E = EigenE+dE
-    if E <= Emax:
-        xmin, xmax = get_integration_range(E, kin_energy, eps_left, eps_right)
-        integration_range = np.arange(xmin, xmax, dx)
-        N = np.shape(integration_range)[0]
-        match_index = 1
-        psi_val = np.zeros(N, dtype='f8')
-        psi_val[0], psi_val[1], psi_val[-1], psi_val[-2] = 0.0, (-1.0)**n, 0.0, 1.0
-        EigenE = getUpperEigenstate(meff, E, dE, kin_energy, N, integration_range, psi_val, match_index)
-        psileft,psiright,psi_tmp =  returnEigenWaveFunction(meff, EigenE, kin_energy, N, integration_range, psi_val, match_index)
-    if (EigenE <= Emax):
-          print("energy guess = ", E)
-          print("n, psi_val[0], psi_val[1], psi_val[-1], psi_val[-2]: ", n, psi_val[0], psi_val[1], psi_val[-1], psi_val[-2])
-          print("EigenE = ", EigenE, "Hartrees")
-          # conversion from Hartrees into cm-1
-          print(EigenE*219474.631363, " cm^-1")
-          # print analytic energies of morse potential
-          #print("Morse potential: ", get_En_morsePot(n, De, a))
-          #print analytic energies of infinite square well
-          #print("Infinite well: ", get_En_infinite_well(n, a))
-          energies.append(EigenE)
-          wavefunctions.append((integration_range, psi_tmp))
-          ax.plot(integration_range, EigenE + plot_factor*psi_tmp)
-          if (n>=1):
-              dE = (energies[-1]-energies[-2])/5.0
-          n+=1
-# # save energies and wavefunctions in picklet object          
-pickle.dump(zip(energies,wavefunctions), open("x1sgplus_solutions.dat", "wb"))
+# while E < Emax:
+#     E = EigenE+dE
+#     if E <= Emax:
+#         xmin, xmax = get_integration_range(E, kin_energy, eps_left, eps_right)
+#         integration_range = np.arange(xmin, xmax, dx)
+#         N = np.shape(integration_range)[0]
+#         match_index = 1
+#         psi_val = np.zeros(N, dtype='f8')
+#         psi_val[0], psi_val[1], psi_val[-1], psi_val[-2] = 0.0, (-1.0)**n, 0.0, 1.0
+#         EigenE = getUpperEigenstate(meff, E, dE, kin_energy, N, integration_range, psi_val, match_index)
+#         psileft,psiright,psi_tmp =  returnEigenWaveFunction(meff, EigenE, kin_energy, N, integration_range, psi_val, match_index)
+#     if (EigenE <= Emax):
+#           print("energy guess = ", E)
+#           print("n, psi_val[0], psi_val[1], psi_val[-1], psi_val[-2]: ", n, psi_val[0], psi_val[1], psi_val[-1], psi_val[-2])
+#           print("EigenE = ", EigenE, "Hartrees")
+#           # conversion from Hartrees into cm-1
+#           print(EigenE*219474.631363, " cm^-1")
+#           # print analytic energies of morse potential
+#           #print("Morse potential: ", get_En_morsePot(n, De, a))
+#           #print analytic energies of infinite square well
+#           #print("Infinite well: ", get_En_infinite_well(n, a))
+#           energies.append(EigenE)
+#           wavefunctions.append((integration_range, psi_tmp))
+#           ax.plot(integration_range, EigenE + plot_factor*psi_tmp)
+#           if (n>=1):
+#               dE = (energies[-1]-energies[-2])/5.0
+#           n+=1
+# save energies and wavefunctions in picklet object          
+#pickle.dump(zip(energies,wavefunctions), open("x1sgplus_solutions.dat", "wb"))
+#pickle.dump(zip(energies,wavefunctions), open("a3suplus_solutions.dat", "wb"))
+#pickle.dump(zip(energies,wavefunctions), open("one2sgplus_solutions.dat", "wb"))
+
+
+solutions_singlett = list(pickle.load(open("x1sgplus_solutions.dat", "rb")))
+solutions_triplett = list(pickle.load(open("a3suplus_solutions.dat", "rb")))
+solutions_li2ion = list(pickle.load(open("one2sgplus_solutions.dat", "rb")))
+# ax.plot(np.array(solutions_singlett[-1][1][0]), solutions_singlett[-1][0]+0.04*np.array(solutions_singlett[-1][1][1]))
+# ax.plot(np.array(solutions_triplett[-1][1][0]), solutions_triplett[-1][0]+0.04*np.array(solutions_triplett[-1][1][1]))
+
+highest_singlett_pos, highest_singlett_wav = np.array(solutions_singlett[-1][1][0]), np.array(solutions_singlett[-1][1][1])
+ax.plot(highest_singlett_pos, highest_singlett_wav)
+highest_triplett_pos, highest_triplett_wav = np.array(solutions_triplett[-1][1][0]), np.array(solutions_triplett[-1][1][1])
+ax.plot(highest_triplett_pos, highest_triplett_wav)
+
+def getOverlap(pos1, pos2, wf1, wf2):
+    dx = pos1[1]-pos1[0]
+    pos_new = np.arange(max(pos1[0], pos2[0]), min(pos1[-1], pos2[-1]),dx)
+    if(pos_new[0]==pos2[0]):
+        wf2_new = wf2[:len(pos_new)]
+        # re-calculate wf1 whose domain is pos1 for new domain pos_new
+        # calculate minimum shift between the new and the old integration range
+        imin = np.argmin(np.abs(pos_new[0]-pos1))
+        a = pos_new[0] - pos1[imin]
+        m = np.gradient(wf1[imin:imin+len(pos_new)])
+        wf1_new = wf1[imin:imin+len(pos_new)]+a*m        
+    else:
+        wf1_new = wf1[:len(pos_new)]
+        # re-calculate wf2 whose domain is pos2 for new domain pos
+        imin = np.argmin(np.abs(pos_new[0]-pos2))
+        a = pos_new[0] - pos2[imin]
+        m = np.gradient(wf2[imin:imin+len(pos_new)])
+        wf2_new = wf2[imin:imin+len(pos_new)]+a*m
+        
+    return np.trapz(wf1_new*wf2_new, pos_new)**2
+
+factor_w_singlett = []
+factor_w_triplett = []
+
+for elem in solutions_li2ion:
+    factor_w_singlett.append(getOverlap(elem[1][0],highest_singlett_pos,elem[1][1], highest_singlett_wav))
+    factor_w_triplett.append(getOverlap(elem[1][0],highest_triplett_pos,elem[1][1], highest_triplett_wav))
+        
+fig2 = plt.figure(figsize=(10,10))
+ax2 = fig2.add_subplot(111)
+
+ax2.plot(factor_w_singlett)       
+ax2.plot(factor_w_triplett)        
