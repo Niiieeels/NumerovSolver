@@ -38,10 +38,6 @@ def get_delta(E, meff, func, N, pos_array, psi, matching_index):
         imax = N-1
     else:
         imax = np.argmin(np.abs(pos_array - pos_array[mask][0]))
-    #print("imin = ", imin, " imax = ", imax)
-    #imin = np.argmin(np.abs(pos_array - 50/func_vals))
-    #imax = np.argmin(np.abs(pos_array + 50/func_vals))
-    #N = np.shape(pos_array)[0]
     imin = 0
     imax = N-1
     ic = matching_index
@@ -82,14 +78,6 @@ def get_delta(E, meff, func, N, pos_array, psi, matching_index):
         print("psileft[ic], psiright[ic]: ", psileft[ic], psiright[ic])
    
     error = 0
-    # if derivatives have opposite sign, so that right wavefunction 
-    # would
-    # have to be mirrored, skip this solution
-    # because it would change boundary condition
-#    if ((derivleft[ic]*derivright[ic]<0) and (gammal*gammar>0)):
-#        error = gammal+gammar
-#    else:
-#        error = gammal-gammar   
     error = gammar-gammal
     
     return error
@@ -108,18 +96,12 @@ def bisection(meff, E0, delta0, E1, delta1, func, N, pos_array, psi_value, match
         i += 1
         #setting new interval
         if(delta2*delta0 > 0):
-            #E1 = E2
-            #delta1 = delta2
             E0 = E2
             delta0 = delta2
         else:
-            #E0 = E2
-            #delta0 = delta2
             E1 = E2
             delta1 = delta2
     
-    #print("final E0, E1 = ", E0, E1)
-    #print("final delta0, delta1 = ", delta0, delta1)
     return (delta0, delta1, E0)
  
 # pot_func assumes a potential energy with one definite minimum
@@ -449,6 +431,8 @@ ax.plot(highest_singlett_pos, highest_singlett_wav)
 highest_triplett_pos, highest_triplett_wav = np.array(solutions_triplett[-1][1][0]), np.array(solutions_triplett[-1][1][1])
 ax.plot(highest_triplett_pos, highest_triplett_wav)
 
+#this function returns the franck-condon overlap between two
+# vibrational wavefunctions
 def getOverlap(pos1, pos2, wf1, wf2):
     dx = pos1[1]-pos1[0]
     pos_new = np.arange(max(pos1[0], pos2[0]), min(pos1[-1], pos2[-1]),dx)
@@ -480,5 +464,5 @@ for elem in solutions_li2ion:
 fig2 = plt.figure(figsize=(10,10))
 ax2 = fig2.add_subplot(111)
 
-ax2.plot(factor_w_singlett)       
-ax2.plot(factor_w_triplett)        
+ax2.plot(factor_w_singlett, label='Overlap w highest wf of singulett potential')       
+ax2.plot(factor_w_triplett, label='Overlap w highest wf of triplett potential')        
