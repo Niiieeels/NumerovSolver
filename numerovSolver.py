@@ -442,14 +442,14 @@ def getOverlap(pos1, pos2, wf1, wf2):
         # calculate minimum shift between the new and the old integration range
         imin = np.argmin(np.abs(pos_new[0]-pos1))
         a = pos_new[0] - pos1[imin]
-        m = np.gradient(wf1[imin:imin+len(pos_new)])
+        m = np.gradient(wf1[imin:imin+len(pos_new)], pos1[imin:imin+len(pos_new)])
         wf1_new = wf1[imin:imin+len(pos_new)]+a*m        
     else:
         wf1_new = wf1[:len(pos_new)]
         # re-calculate wf2 whose domain is pos2 for new domain pos
         imin = np.argmin(np.abs(pos_new[0]-pos2))
         a = pos_new[0] - pos2[imin]
-        m = np.gradient(wf2[imin:imin+len(pos_new)])
+        m = np.gradient(wf2[imin:imin+len(pos_new)], pos2[imin:imin+len(pos_new)])
         wf2_new = wf2[imin:imin+len(pos_new)]+a*m
         
     return np.trapz(wf1_new*wf2_new, pos_new)**2
@@ -466,3 +466,4 @@ ax2 = fig2.add_subplot(111)
 
 ax2.plot(factor_w_singlett, label='Overlap w highest wf of singulett potential')       
 ax2.plot(factor_w_triplett, label='Overlap w highest wf of triplett potential')        
+ax2.legend(fontsize=18)
