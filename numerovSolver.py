@@ -225,12 +225,12 @@ bond_length1 = 5.0550174  # X^1S_g^+
 bond_length2 = 7.9028347 # A^3S_u^+
 bond_length3 = 5.8562613 #12S_g^+
 
-N = 1000
+N = 10000
 psi_val = np.zeros(N, dtype='f8')
 xlim_left, xlim_right = 1,40
 pos_array = np.linspace(xlim_left, xlim_right, N, dtype='f8')
 dx = pos_array[1]-pos_array[0]
-#ax.plot(r0, pot6, 'ro')
+
 
 ##################################################################
 
@@ -265,8 +265,7 @@ def y(pos, p, r_ref):
     return (pos**p-r_ref**p)/(pos**p + r_ref**p)
 
 # exponential polynomial in definition of MLR model
-def beta(pos, De, r_ref, p, q, *coeffs):
-    global r_eq
+def beta(pos, De, r_eq, r_ref, p, q, *coeffs):
     beta_inf = np.log(2*De/u(r_eq)) 
     return (y(pos, p, r_ref)*beta_inf+(1-y(pos, p, r_ref))*funcPoly(pos, lambda x: y(x, q, r_ref), *coeffs))
 
@@ -276,24 +275,23 @@ def beta(pos, De, r_ref, p, q, *coeffs):
 # inverse power in the long range potential u(r)
 # q < p is a small value
 # r_ref = can roughly be chosen between 1.1r_eq and 1.5r_eq
-def MLR_pot(pos, De, r_ref, *coeff_list,p=4, q=2):
-    global r_eq
-    return De*(1- u(pos)/u(r_eq)*np.exp(-beta(pos, De, r_ref, p, q, *coeff_list)*y(pos, p, r_eq)))**2
+def MLR_pot(pos, De, r_eq, r_ref, *coeff_list,p=4, q=3):
+    return De*(1- u(pos)/u(r_eq)*np.exp(-beta(pos, De, r_eq, r_ref, p, q, *coeff_list)*y(pos, p, r_eq)))**2
 
 # #fit long range morse potential to e.g. A^3S_u^+, X1sg^+
-r_eq = bond_length2
+r_eq = bond_length3
 rref = 1.3*r_eq
 
-# # use of least_squares
-# # function to be minimized
-# # x0 is a numpy array with parameters
+# use of least_squares
+# function to be minimized
+# x0 is a numpy array with parameters
 # def F(x0):
 #     global r0, dissE, dissE2, dissE3, rref
-#     return (MLR_pot(r0, dissE2, rref, *tuple(x0))-pot6)
+#     return (MLR_pot(r0, dissE3, rref, *tuple(x0))-pot11)
 # x0_init = np.array([0])
 # #res = least_squares(F, x0_init, method='trf', loss='soft_l1')
 # res = least_squares(F, x0_init, method='lm')
-# for i in np.arange(13):
+# for i in np.arange(12):
 #     x0_init = np.array(tuple(res.x)+(0,))
 #     try:
 #         res = least_squares(F, x0_init, method='lm')
@@ -306,15 +304,15 @@ rref = 1.3*r_eq
 # print(res.cost)
 
 #pickle.dump(res.x, open("x1sgplus.pot","wb"))
-# pickle.dump(res.x, open("a3suplus.pot", "wb"))
-# pickle.dump(res.x, open("one2sgplus.pot", "wb"))
+#pickle.dump(res.x, open("a3suplus.pot", "wb"))
+#pickle.dump(res.x, open("one2sgplus.pot", "wb"))
 
-a3suplus_pot = lambda pos: MLR_pot(pos, dissE2, 1.3*bond_length2, *tuple(pickle.load(open("a3suplus.pot", "rb"))),p=4, q=2)
-x1sgplus_pot = lambda pos: MLR_pot(pos, dissE, 1.6*bond_length1, *tuple(pickle.load(open("x1sgplus.pot", "rb"))), p=4, q=3)
-one2sgplus_pot = lambda pos: MLR_pot(pos, dissE3, 1.3*bond_length3, *tuple(pickle.load(open("one2sgplus.pot", "rb"))), p=4, q=3)
+a3suplus_pot = lambda pos: MLR_pot(pos, dissE2, bond_length2,1.3*bond_length2, *tuple(pickle.load(open("a3suplus.pot", "rb"))),p=4, q=2)
+x1sgplus_pot = lambda pos: MLR_pot(pos, dissE, bond_length1, 1.6*bond_length1, *tuple(pickle.load(open("x1sgplus.pot", "rb"))), p=4, q=3)
+one2sgplus_pot = lambda pos: MLR_pot(pos, dissE3, bond_length3,1.3*bond_length3, *tuple(pickle.load(open("one2sgplus.pot", "rb"))), p=4, q=3)
 
-#this function returns the finite well potential
-#depending on its total energy E in finite square well potential
+# this function returns the finite well potential
+# depending on its total energy E in finite square well potential
 # in the limiting case of an infinitely deep square well, the
 # energy levels are given by En = pi**2/(2*meff*a**2)
 def square_well(x,De,a,x0=0):
@@ -343,23 +341,23 @@ def get_En_morsePot(n,De,a):
     return a*np.sqrt(2*De/meff)*(n+0.5)-(a*np.sqrt(2*De/meff)*(n+0.5))**2/(4*De)
     
 #chosen_potential, meff = harmonic_pot, 1
-#De, a, re, meff = 5, 1, 10, 1
+#De, a, re, meff = 10, 1, 10, 1
 #nu0 = a/(2*np.pi)*np.sqrt(2*De/meff)
 #chosen_potential = lambda x: morsePot(x, De, a, re)
 #De, a, x0, meff = 50000, 10, 0, 1
 #chosen_potential = lambda x: square_well(x, De, a, x0)
 # Optimal parameters fit of MLR model to A3S_^+-potential:
 # r_ref = 1.3 r_eq, N=13, p=4, q=2 @ cost = 1.70129E-9
-chosen_potential, meff = a3suplus_pot, 5468.67
-#chosen_potential, meff = x1sgplus_pot, 5468.67
-#chosen_potential, meff = one2sgplus_pot, 5468.67
+#chosen_potential, meff, data_points = a3suplus_pot, 5468.67, pot6
+#chosen_potential, meff, data_points = x1sgplus_pot, 5468.67, pot1
+chosen_potential, meff, data_points = one2sgplus_pot, 5468.67, pot11
 
-# plot_factor = 0.0002
-# pot_along_array = chosen_potential(pos_array)
-# ax.set_xlim(xlim_left,xlim_right)
-# ax.set_ylim(0, 2*1.5*(pot_along_array[-1]-pot_along_array[np.argmin(pot_along_array)]))
-# ax.plot(pos_array, pot_along_array)
-
+plot_factor = 0.001
+pot_along_array = chosen_potential(pos_array)
+ax.set_xlim(xlim_left,xlim_right)
+ax.set_ylim(0, 2*1.5*(pot_along_array[-1]-pot_along_array[np.argmin(pot_along_array)]))
+ax.plot(pos_array, pot_along_array)
+ax.plot(r0, data_points, 'ro')
 
 
 
@@ -369,9 +367,9 @@ def kin_energy(r,meff,E):
 
 
 #negative logarithms of relative decays (determines integration range)
-eps_left, eps_right = 150, 100
+eps_left, eps_right = 400, 100
 
-E,EigenE, n,Emax = 0,0,0,dissE2
+E,EigenE, n,Emax = 0,0,0,dissE
 dE = Emax/1000
 psi_val[0], psi_val[1], psi_val[-1], psi_val[-2] = 0.0, (-1.0)**n, 0.0, 1.0
 
@@ -408,6 +406,7 @@ energies = []
 #           print(EigenE*219474.631363, " cm^-1")
 #           # print analytic energies of morse potential
 #           #print("Morse potential: ", get_En_morsePot(n, De, a))
+#           #print("Difference [cm^-1]:", (EigenE-get_En_morsePot(n, De, a))*219474.631363, "\n")
 #           #print analytic energies of infinite square well
 #           #print("Infinite well: ", get_En_infinite_well(n, a))
 #           energies.append(EigenE)
@@ -422,66 +421,46 @@ energies = []
 #pickle.dump(zip(energies,wavefunctions), open("one2sgplus_solutions.dat", "wb"))
 
 
-solutions_singlett = list(pickle.load(open("x1sgplus_solutions.dat", "rb")))
-solutions_triplett = list(pickle.load(open("a3suplus_solutions.dat", "rb")))
-solutions_li2ion = list(pickle.load(open("one2sgplus_solutions.dat", "rb")))
-#ax.plot(np.array(solutions_singlett[-1][1][0]), solutions_singlett[-1][0]+0.04*np.array(solutions_singlett[-1][1][1]))
-#ax.plot(np.array(solutions_triplett[-1][1][0]), solutions_triplett[-1][0]+0.04*np.array(solutions_triplett[-1][1][1]))
+# solutions_singlett = list(pickle.load(open("x1sgplus_solutions.dat", "rb")))
+# solutions_triplett = list(pickle.load(open("a3suplus_solutions.dat", "rb")))
+# solutions_li2ion = list(pickle.load(open("one2sgplus_solutions.dat", "rb")))
+# ax.plot(np.array(solutions_singlett[-1][1][0]), solutions_singlett[-1][0]+0.04*np.array(solutions_singlett[-1][1][1]))
+# ax.plot(np.array(solutions_triplett[-1][1][0]), solutions_triplett[-1][0]+0.04*np.array(solutions_triplett[-1][1][1]))
 
-highest_singlett_pos, highest_singlett_wav = np.array(solutions_singlett[-1][1][0]), np.array(solutions_singlett[-1][1][1])
-ax.plot(highest_singlett_pos, highest_singlett_wav, label='Highest singlett wavefunction')
-highest_triplett_pos, highest_triplett_wav = np.array(solutions_triplett[-1][1][0]), np.array(solutions_triplett[-1][1][1])
-ax.plot(highest_triplett_pos, highest_triplett_wav, label='Highest triplett wave function')
+# highest_singlett_pos, highest_singlett_wav = np.array(solutions_singlett[-1][1][0]), np.array(solutions_singlett[-1][1][1])
+# #ax.plot(highest_singlett_pos, highest_singlett_wav, label='Highest singlett wavefunction')
+# highest_triplett_pos, highest_triplett_wav = np.array(solutions_triplett[-1][1][0]), np.array(solutions_triplett[-1][1][1])
+# #ax.plot(highest_triplett_pos, highest_triplett_wav, label='Highest triplett wave function')
 
-#ax.plot(solutions_singlett[0][1][0], solutions_singlett[0][1][1])
-#ax.plot(solutions_triplett[0][1][0], solutions_triplett[0][1][1])
-#ax.legend(fontsize=18)
+# #ax.plot(solutions_singlett[0][1][0], solutions_singlett[0][1][1])
+# #ax.plot(solutions_triplett[0][1][0], solutions_triplett[0][1][1])
+# #ax.legend(fontsize=18)
 
-# #this function returns the franck-condon overlap between two
-# # vibrational wavefunctions
-def getOverlap(pos1, pos2, wf1, wf2):
-    dx = pos1[1]-pos1[0]
-    minpos = max(pos1[0], pos2[0])
-    maxpos = min(pos1[-1], pos2[-1])
-    pos_new = np.arange(minpos, maxpos,dx)
-    imin1 = np.argmin(np.abs(pos1-minpos))
-    imin2 = np.argmin(np.abs(pos2-minpos))
-    imax1 = np.argmin(np.abs(pos1-maxpos))
-    imax2 = np.argmin(np.abs(pos2-maxpos))
-    #print(imin1, imin2, imax1, imax2)
-    #print(np.shape(wf1[imin1:imax1]))
-    #print(np.shape(wf2[imin2:imax2]))
-    #print(np.shape(pos_new))
-    return np.trapz(wf1[imin1:imax1]*wf2[imin2:imax2], pos1[imin1:imax1])**2
-    # if(pos_new[0]==pos2[0]):
-    #     wf2_new = wf2[:len(pos_new)]
-    #     # re-calculate wf1 whose domain is pos1 for new domain pos_new
-    #     # calculate minimum shift between the new and the old integration range
-    #     imin = np.argmin(np.abs(pos_new[0]-pos1))
-    #     a = pos_new[0] - pos1[imin]
-    #     m = np.gradient(wf1[imin:imin+len(pos_new)], pos1[imin:imin+len(pos_new)])
-    #     wf1_new = wf1[imin:imin+len(pos_new)]+a*m        
-    # else:
-    #     wf1_new = wf1[:len(pos_new)]
-    #     # re-calculate wf2 whose domain is pos2 for new domain pos
-    #     imin = np.argmin(np.abs(pos_new[0]-pos2))
-    #     a = pos_new[0] - pos2[imin]
-    #     m = np.gradient(wf2[imin:imin+len(pos_new)], pos2[imin:imin+len(pos_new)])
-    #     wf2_new = wf2[imin:imin+len(pos_new)]+a*m
+# # #this function returns the franck-condon overlap between two
+# # # vibrational wavefunctions
+# def getOverlap(pos1, pos2, wf1, wf2):
+#     dx = pos1[1]-pos1[0]
+#     minpos = max(pos1[0], pos2[0])
+#     maxpos = min(pos1[-1], pos2[-1])
+#     pos_new = np.arange(minpos, maxpos,dx)
+#     imin1 = np.argmin(np.abs(pos1-minpos))
+#     imin2 = np.argmin(np.abs(pos2-minpos))
+#     imax1 = np.argmin(np.abs(pos1-maxpos))
+#     imax2 = np.argmin(np.abs(pos2-maxpos))
+    
+#     return np.trapz(wf1[imin1:imax1]*wf2[imin2:imax2], pos1[imin1:imax1])**2
+
+# factor_w_singlett = []
+# factor_w_triplett = []
+
+# for elem in solutions_li2ion:
+#     factor_w_singlett.append(getOverlap(elem[1][0],highest_singlett_pos,elem[1][1], highest_singlett_wav))
+#     factor_w_triplett.append(getOverlap(elem[1][0],highest_triplett_pos,elem[1][1], highest_triplett_wav))
         
-#     return np.trapz(wf1_new*wf2_new, pos_new)**2
+# # fig2 = plt.figure(figsize=(10,10))
+# # ax2 = fig2.add_subplot(111)
+# # #ax2.plot(wavefunctions[0][0], wavefunctions[0][1])
 
-factor_w_singlett = []
-factor_w_triplett = []
-
-for elem in solutions_li2ion:
-    factor_w_singlett.append(getOverlap(elem[1][0],highest_singlett_pos,elem[1][1], highest_singlett_wav))
-    factor_w_triplett.append(getOverlap(elem[1][0],highest_triplett_pos,elem[1][1], highest_triplett_wav))
-        
-fig2 = plt.figure(figsize=(10,10))
-ax2 = fig2.add_subplot(111)
-#ax2.plot(wavefunctions[0][0], wavefunctions[0][1])
-
-ax2.plot(factor_w_singlett, label='Overlap w highest wf of singulett potential')       
-ax2.plot(factor_w_triplett, label='Overlap w highest wf of triplett potential')        
-ax2.legend(fontsize=18)
+# # ax2.plot(factor_w_singlett, label='Overlap w highest wf of singulett potential')       
+# # ax2.plot(factor_w_triplett, label='Overlap w highest wf of triplett potential')        
+# # ax2.legend(fontsize=18)
