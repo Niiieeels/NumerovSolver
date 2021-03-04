@@ -348,9 +348,9 @@ def get_En_morsePot(n,De,a):
 #chosen_potential = lambda x: square_well(x, De, a, x0)
 # Optimal parameters fit of MLR model to A3S_^+-potential:
 # r_ref = 1.3 r_eq, N=13, p=4, q=2 @ cost = 1.70129E-9
-#chosen_potential, meff, data_points = a3suplus_pot, 5468.67, pot6
-#chosen_potential, meff, data_points = x1sgplus_pot, 5468.67, pot1
-chosen_potential, meff, data_points = one2sgplus_pot, 5468.67, pot11
+#chosen_potential, meff, data_points, De = a3suplus_pot, 5468.67, pot6, dissE2
+#chosen_potential, meff, data_points, De = x1sgplus_pot, 5468.67, pot1, dissE
+chosen_potential, meff, data_points, De = one2sgplus_pot, 5468.67, pot11, dissE3
 
 plot_factor = 0.001
 pot_along_array = chosen_potential(pos_array)
@@ -369,7 +369,7 @@ def kin_energy(r,meff,E):
 #negative logarithms of relative decays (determines integration range)
 eps_left, eps_right = 400, 100
 
-E,EigenE, n,Emax = 0,0,0,dissE
+E,EigenE, n,Emax = 0,0,0,De
 dE = Emax/1000
 psi_val[0], psi_val[1], psi_val[-1], psi_val[-2] = 0.0, (-1.0)**n, 0.0, 1.0
 
@@ -421,46 +421,43 @@ energies = []
 #pickle.dump(zip(energies,wavefunctions), open("one2sgplus_solutions.dat", "wb"))
 
 
-# solutions_singlett = list(pickle.load(open("x1sgplus_solutions.dat", "rb")))
-# solutions_triplett = list(pickle.load(open("a3suplus_solutions.dat", "rb")))
-# solutions_li2ion = list(pickle.load(open("one2sgplus_solutions.dat", "rb")))
-# ax.plot(np.array(solutions_singlett[-1][1][0]), solutions_singlett[-1][0]+0.04*np.array(solutions_singlett[-1][1][1]))
-# ax.plot(np.array(solutions_triplett[-1][1][0]), solutions_triplett[-1][0]+0.04*np.array(solutions_triplett[-1][1][1]))
+solutions_singlett = list(pickle.load(open("x1sgplus_solutions.dat", "rb")))
+solutions_triplett = list(pickle.load(open("a3suplus_solutions.dat", "rb")))
+solutions_li2ion = list(pickle.load(open("one2sgplus_solutions.dat", "rb")))
+ax.plot(np.array(solutions_singlett[-1][1][0]), solutions_singlett[-1][0]+0.04*np.array(solutions_singlett[-1][1][1]))
+ax.plot(np.array(solutions_triplett[-1][1][0]), solutions_triplett[-1][0]+0.04*np.array(solutions_triplett[-1][1][1]))
 
-# highest_singlett_pos, highest_singlett_wav = np.array(solutions_singlett[-1][1][0]), np.array(solutions_singlett[-1][1][1])
-# #ax.plot(highest_singlett_pos, highest_singlett_wav, label='Highest singlett wavefunction')
-# highest_triplett_pos, highest_triplett_wav = np.array(solutions_triplett[-1][1][0]), np.array(solutions_triplett[-1][1][1])
-# #ax.plot(highest_triplett_pos, highest_triplett_wav, label='Highest triplett wave function')
+highest_singlett_pos, highest_singlett_wav = np.array(solutions_singlett[-1][1][0]), np.array(solutions_singlett[-1][1][1])
+#ax.plot(highest_singlett_pos, highest_singlett_wav, label='Highest singlett wavefunction')
+highest_triplett_pos, highest_triplett_wav = np.array(solutions_triplett[-1][1][0]), np.array(solutions_triplett[-1][1][1])
+#ax.plot(highest_triplett_pos, highest_triplett_wav, label='Highest triplett wave function')
 
-# #ax.plot(solutions_singlett[0][1][0], solutions_singlett[0][1][1])
-# #ax.plot(solutions_triplett[0][1][0], solutions_triplett[0][1][1])
-# #ax.legend(fontsize=18)
+#ax.plot(solutions_singlett[0][1][0], solutions_singlett[0][1][1])
+#ax.plot(solutions_triplett[0][1][0], solutions_triplett[0][1][1])
+#ax.legend(fontsize=18)
 
-# # #this function returns the franck-condon overlap between two
-# # # vibrational wavefunctions
-# def getOverlap(pos1, pos2, wf1, wf2):
-#     dx = pos1[1]-pos1[0]
-#     minpos = max(pos1[0], pos2[0])
-#     maxpos = min(pos1[-1], pos2[-1])
-#     pos_new = np.arange(minpos, maxpos,dx)
-#     imin1 = np.argmin(np.abs(pos1-minpos))
-#     imin2 = np.argmin(np.abs(pos2-minpos))
-#     imax1 = np.argmin(np.abs(pos1-maxpos))
-#     imax2 = np.argmin(np.abs(pos2-maxpos))
-    
-#     return np.trapz(wf1[imin1:imax1]*wf2[imin2:imax2], pos1[imin1:imax1])**2
+# #this function returns the franck-condon overlap between two
+# # vibrational wavefunctions
+def getOverlap(pos1, pos2, wf1, wf2):
+    minpos = max(pos1[0], pos2[0])
+    maxpos = min(pos1[-1], pos2[-1])
+    imin1 = np.argmin(np.abs(pos1-minpos))
+    imin2 = np.argmin(np.abs(pos2-minpos))
+    imax1 = np.argmin(np.abs(pos1-maxpos))
+    imax2 = np.argmin(np.abs(pos2-maxpos))    
+    return np.trapz(wf1[imin1:imax1]*wf2[imin2:imax2], pos1[imin1:imax1])**2
 
-# factor_w_singlett = []
-# factor_w_triplett = []
+factor_w_singlett = []
+factor_w_triplett = []
 
-# for elem in solutions_li2ion:
-#     factor_w_singlett.append(getOverlap(elem[1][0],highest_singlett_pos,elem[1][1], highest_singlett_wav))
-#     factor_w_triplett.append(getOverlap(elem[1][0],highest_triplett_pos,elem[1][1], highest_triplett_wav))
+for elem in solutions_li2ion:
+    factor_w_singlett.append(getOverlap(elem[1][0],highest_singlett_pos,elem[1][1], highest_singlett_wav))
+    factor_w_triplett.append(getOverlap(elem[1][0],highest_triplett_pos,elem[1][1], highest_triplett_wav))
         
-# # fig2 = plt.figure(figsize=(10,10))
-# # ax2 = fig2.add_subplot(111)
-# # #ax2.plot(wavefunctions[0][0], wavefunctions[0][1])
+fig2 = plt.figure(figsize=(10,10))
+ax2 = fig2.add_subplot(111)
+#ax2.plot(wavefunctions[0][0], wavefunctions[0][1])
 
-# # ax2.plot(factor_w_singlett, label='Overlap w highest wf of singulett potential')       
-# # ax2.plot(factor_w_triplett, label='Overlap w highest wf of triplett potential')        
-# # ax2.legend(fontsize=18)
+ax2.plot(factor_w_singlett, label='Overlap w highest wf of singulett potential')       
+ax2.plot(factor_w_triplett, label='Overlap w highest wf of triplett potential')        
+ax2.legend(fontsize=18)
