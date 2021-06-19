@@ -7,7 +7,7 @@ Created on Sun May 24 15:21:09 2020
 tested on harmonic oscillator, morse potential and square well potential.
 """
 
-'some standard imports for plotting, fitting etc.'
+'some standard imports for plotting, fitting bla.'
 import numpy as np
 import pickle
 import matplotlib.pyplot as plt
